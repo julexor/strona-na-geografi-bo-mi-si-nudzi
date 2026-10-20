@@ -9,7 +9,7 @@
 :root{
   --bg:#edf1f0; --panel:#fafcfb; --ink:#14262b; --muted:#566b6f; --line:#c7d3d2;
   --ground:#d5e2e8; --land:#e3e9db; --land-hi:#cfdcc2; --filler:#d9dfd3; --border:#7b9187; --coast:#2c484d;
-  --accent:#0e6a78; --accent-ink:#ffffff; --good:#2f8f5b; --retry:#d49a1c; --bad:#c2453b; --halo:#f4f8f2;
+  --river:#4a87ab; --accent:#0e6a78; --accent-ink:#ffffff; --good:#2f8f5b; --retry:#d49a1c; --bad:#c2453b; --halo:#f4f8f2;
   --f-ui:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-map:"Source Serif 4",Georgia,"Times New Roman",serif;
@@ -18,14 +18,14 @@
   :root:not([data-theme="light"]){
     --bg:#0c1618; --panel:#132023; --ink:#e3eeee; --muted:#8ea6aa; --line:#26383c;
     --ground:#0a1a21; --land:#25342f; --land-hi:#32473f; --filler:#1d2a27; --border:#4b695f; --coast:#a3c3c7;
-    --accent:#4fc1d0; --accent-ink:#06191c; --good:#4cc283; --retry:#e0b04a; --bad:#ec7a6f; --halo:#101c1a;
+    --river:#5aa6cf; --accent:#4fc1d0; --accent-ink:#06191c; --good:#4cc283; --retry:#e0b04a; --bad:#ec7a6f; --halo:#101c1a;
     color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
   --bg:#0c1618; --panel:#132023; --ink:#e3eeee; --muted:#8ea6aa; --line:#26383c;
   --ground:#0a1a21; --land:#25342f; --land-hi:#32473f; --filler:#1d2a27; --border:#4b695f; --coast:#a3c3c7;
-  --accent:#4fc1d0; --accent-ink:#06191c; --good:#4cc283; --retry:#e0b04a; --bad:#ec7a6f; --halo:#101c1a;
+  --river:#5aa6cf; --accent:#4fc1d0; --accent-ink:#06191c; --good:#4cc283; --retry:#e0b04a; --bad:#ec7a6f; --halo:#101c1a;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -122,6 +122,15 @@ button.chip:hover{border-color:var(--accent)}
 @keyframes fade{from{opacity:1}to{opacity:0}}
 .lab{font-family:var(--f-map);font-style:italic;font-weight:600;fill:var(--ink);text-anchor:middle;pointer-events:none;paint-order:stroke;stroke:var(--halo);stroke-linejoin:round}
 .lab.muted{fill:var(--muted);font-weight:500}
+.river{fill:none;stroke:var(--river);stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;opacity:.9}
+.rl{font-family:var(--f-map);font-style:italic;font-weight:500;fill:var(--river);paint-order:stroke;stroke:var(--halo);stroke-linejoin:round}
+.cd{fill:var(--ink);stroke:var(--halo);stroke-width:1.2px;vector-effect:non-scaling-stroke}
+.cl{font-family:var(--f-body);font-weight:500;fill:var(--ink);paint-order:stroke;stroke:var(--halo);stroke-linejoin:round}
+.cn{font-family:var(--f-ui);font-weight:600;fill:var(--muted);letter-spacing:.14em;text-anchor:middle}
+.sea{font-family:var(--f-map);font-style:italic;font-weight:500;fill:var(--river);letter-spacing:.08em;text-anchor:middle}
+.mapopts{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 14px}
+.tog{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer;min-height:30px}
+.tog input{width:18px;height:18px;accent-color:var(--accent);margin:0}
 @media (prefers-reduced-motion:reduce){.hi.pulse{animation:none}.hi.good,.hi.bad,.hi.reveal{animation-duration:.01s}.toast{transition:none}}
 
 @media (max-width:860px){
@@ -172,6 +181,9 @@ button.chip:hover{border-color:var(--accent)}
         <div class="result" id="result" hidden></div>
       </div>
       <div class="choices" id="choices" hidden></div>
+      <div class="mapopts">
+        <label class="tog" for="tRef"><input type="checkbox" id="tRef" checked> Miasta, rzeki i kraje sąsiednie</label>
+      </div>
       <p class="note">Granice z podziału fizycznogeograficznego Polski wg Kondrackiego, uproszczone dla szybkości. Szare obszary nie wchodzą do quizu. Przeciągnij, aby przesunąć, scroll lub dwa palce, aby przybliżyć.</p>
     </div>
     <aside class="side">
@@ -241,6 +253,87 @@ window.GEO.byId={};window.GEO.REG.forEach(function(r){window.GEO.byId[r.id]=r;})
     LABS[r.id]=t;
   });
 
+
+  /* ---- punkty odniesienia: miasta, rzeki, sąsiedzi ---- */
+  function proj(lo,la){return [(lo-14.0)*Math.cos(52*Math.PI/180)*111.2+18,(54.95-la)*111.2+18];}
+  var CITIES=[['Warszawa',21.01,52.23,1,'s'],['Kraków',19.94,50.06,1,'s'],['Gdańsk',18.65,54.35,1,'s'],['Wrocław',17.04,51.11,1,'s'],['Poznań',16.93,52.41,1,'s'],['Szczecin',14.55,53.43,1,'s'],['Łódź',19.46,51.76,1,'s'],['Lublin',22.57,51.25,1,'s'],['Białystok',23.16,53.13,1,'s'],['Katowice',19.02,50.26,1,'e'],
+   ['Olsztyn',20.49,53.78,1.2,'s'],['Rzeszów',21.99,50.04,1.2,'s'],['Kielce',20.63,50.87,1.2,'s'],['Bydgoszcz',18.0,53.12,1.2,'s'],
+   ['Opole',17.93,50.67,1.5,'s'],['Zielona Góra',15.51,51.94,1.5,'s'],['Gorzów Wlkp.',15.24,52.73,1.5,'s'],['Toruń',18.6,53.01,1.5,'s'],['Koszalin',16.17,54.19,1.5,'s'],['Częstochowa',19.12,50.8,1.5,'s'],
+   ['Słupsk',17.03,54.46,1.8,'s'],['Suwałki',22.93,54.1,1.8,'s'],['Elbląg',19.4,54.16,1.8,'s'],['Kalisz',18.09,51.76,1.8,'s'],
+   ['Zakopane',19.95,49.3,2,'s'],['Bielsko-Biała',19.05,49.82,2,'e'],['Przemyśl',22.77,49.78,2,'s'],['Zamość',23.25,50.72,2,'s'],['Jelenia Góra',15.74,50.9,2,'s'],['Gdynia',18.53,54.52,2,'e'],['Płock',19.7,52.55,2,'s'],['Radom',21.15,51.4,2,'s'],['Kołobrzeg',15.57,54.18,2,'s'],
+   ['Piła',16.74,53.15,2.5,'s'],['Legnica',16.16,51.21,2.5,'s'],['Wałbrzych',16.28,50.77,2.5,'s'],['Nowy Sącz',20.69,49.62,2.5,'s'],['Tarnów',20.99,50.01,2.5,'s'],['Sandomierz',21.75,50.68,2.5,'s'],['Gniezno',17.58,52.53,2.5,'s'],['Chełm',23.47,51.14,2.5,'s'],['Giżycko',21.76,54.04,2.5,'s'],['Malbork',19.03,54.04,2.5,'s'],['Kłodzko',16.65,50.44,2.5,'s'],['Świnoujście',14.25,53.91,2.5,'s'],['Łeba',17.55,54.76,2.5,'s'],['Białowieża',23.87,52.7,2.5,'e'],
+   ['Hel',18.8,54.6,3,'s'],['Nowy Targ',20.03,49.48,3,'s'],['Sanok',22.2,49.56,3,'s'],['Krosno',21.77,49.69,3,'s'],['Ustrzyki Dolne',22.6,49.43,3,'s'],['Mikołajki',21.57,53.8,3,'s'],['Włodawa',23.55,51.55,3,'e'],['Zwierzyniec',22.97,50.61,3.5,'s'],['Tomaszów Lub.',23.4,50.45,3.5,'s']];
+  var RIVERS=[
+   {n:'Wisła',w:2.4,z:1,lab:[22.0,51.2,'s'],pts:[[18.87,49.62],[18.78,49.8],[19.23,50.03],[19.94,50.06],[20.5,50.08],[21.0,50.2],[21.3,50.4],[21.74,50.68],[21.85,50.89],[21.97,51.42],[21.85,51.57],[21.4,51.9],[21.03,52.2],[20.5,52.35],[19.7,52.55],[19.07,52.65],[18.6,53.01],[18.17,53.13],[18.45,53.41],[18.76,53.48],[18.93,53.73],[18.78,54.09],[18.95,54.36]]},
+   {n:'Odra',w:2.4,z:1,lab:[16.1,51.66,'e'],pts:[[18.3,49.95],[18.22,50.09],[18.2,50.35],[17.93,50.67],[17.46,50.86],[17.04,51.11],[16.43,51.4],[16.08,51.66],[15.7,51.8],[15.1,52.05],[14.55,52.35],[14.65,52.59],[14.49,53.25],[14.55,53.43],[14.6,53.6],[14.6,53.72]]},
+   {n:'Warta',w:1.5,z:1.4,lab:[18.3,52.2,'s'],pts:[[19.4,50.62],[19.1,50.85],[18.85,51.2],[18.73,51.6],[18.5,52.0],[18.27,52.22],[17.6,52.4],[16.93,52.4],[16.3,52.6],[15.9,52.6],[15.24,52.73],[14.65,52.59]]},
+   {n:'Narew',w:1.5,z:1.4,lab:[22.4,53.2,'s'],pts:[[23.6,52.8],[23.0,53.1],[22.78,53.2],[22.07,53.18],[21.57,53.08],[21.08,52.7],[21.0,52.47]]},
+   {n:'Bug',w:1.5,z:1.4,lab:[23.7,51.9,'e'],pts:[[24.0,50.9],[23.8,51.2],[23.55,51.55],[23.62,52.08],[23.2,52.2],[22.65,52.4],[21.88,52.7],[21.45,52.58],[21.0,52.47]]}];
+  var COUNTRIES=[['CZECHY',16.6,49.95,1.3,0],['SŁOWACJA',20.6,48.99,1.3,0],['UKRAINA',24.3,50.0,1.3,0,'e'],['ROSJA',21.0,54.72,1.3,0],['LITWA',23.3,54.62,1.3,0],['BIAŁORUŚ',24.25,52.9,1.3,90],['NIEMCY',14.05,52.3,1.3,-90]];
+  function smoothD(P){
+    function f(q){return q[0].toFixed(1)+' '+q[1].toFixed(1);}
+    function mx(a,b){return ((a[0]+b[0])/2).toFixed(1)+' '+((a[1]+b[1])/2).toFixed(1);}
+    var d='M'+f(P[0])+'L'+mx(P[0],P[1]);
+    for(var i=1;i<P.length-1;i++)d+='Q'+f(P[i])+' '+mx(P[i],P[i+1]);
+    return d+'L'+f(P[P.length-1]);
+  }
+  var gRef=el('g',{'pointer-events':'none'});svg.insertBefore(gRef,gLab);
+  var REF=[];
+  RIVERS.forEach(function(rv){
+    var pts=rv.pts.map(function(q){return proj(q[0],q[1]);});
+    var path=el('path',{'class':'river',d:smoothD(pts),'stroke-width':rv.w},gRef);
+    var lp=proj(rv.lab[0],rv.lab[1]);
+    var t=el('text',{'class':'rl','text-anchor':rv.lab[2]==='e'?'end':'start',x:lp[0],y:lp[1]},gRef);t.textContent=rv.n;
+    REF.push({kind:'river',z:rv.z,path:path,t:t});
+  });
+  COUNTRIES.forEach(function(c){
+    var p=proj(c[1],c[2]);
+    var t=el('text',{'class':'cn',x:p[0],y:p[1]},gRef);t.textContent=c[0];
+    if(c[5]==='e')t.setAttribute('text-anchor','end');
+    REF.push({kind:'country',z:c[3],t:t,x:p[0],y:p[1],rot:c[4]});
+  });
+  var sp=proj(16.3,54.9);
+  var seaT=el('text',{'class':'sea',x:sp[0],y:sp[1]},gRef);seaT.textContent='Morze Bałtyckie';
+  REF.push({kind:'sea',z:1,t:seaT});
+  CITIES.forEach(function(c){
+    var p=proj(c[1],c[2]);
+    var dot=el('circle',{'class':'cd',cx:p[0],cy:p[1],r:2},gRef);
+    var t=el('text',{'class':'cl',x:p[0],y:p[1]},gRef);t.textContent=c[0];
+    REF.push({kind:'city',z:c[3],dot:dot,t:t,x:p[0],y:p[1],a:c[4],cap:c[0]==='Warszawa'});
+  });
+  var refOn=true;
+  try{if(localStorage.getItem('rp-ref')==='0')refOn=false;}catch(e){}
+  $('#tRef').checked=refOn;
+  $('#tRef').addEventListener('change',function(){
+    refOn=this.checked;
+    try{localStorage.setItem('rp-ref',refOn?'1':'0');}catch(e){}
+    updateLabels();
+  });
+  function updateRef(ppu,z){
+    gRef.style.display=refOn?'':'none';
+    if(!refOn)return;
+    REF.forEach(function(o){
+      var show=z>=o.z;
+      if(o.kind==='river'){o.path.style.display=show?'':'none';var fs=9.5/ppu;o.t.style.display=(z>=1.8)?'':'none';o.t.setAttribute('font-size',fs);o.t.setAttribute('stroke-width',fs*0.3);return;}
+      o.t.style.display=show?'':'none';
+      if(o.dot)o.dot.style.display=show?'':'none';
+      if(!show)return;
+      if(o.kind==='city'){
+        var r=(o.cap?4.2:3)/ppu,fs2=(o.cap?10.5:9.5)/ppu;
+        o.dot.setAttribute('r',r);
+        o.t.setAttribute('font-size',fs2);o.t.setAttribute('stroke-width',fs2*0.3);
+        var off=r+2.5/ppu;
+        o.t.setAttribute('x',o.a==='e'?o.x-off:o.x+off);
+        o.t.setAttribute('y',o.y+fs2*0.33);
+        o.t.setAttribute('text-anchor',o.a==='e'?'end':'start');
+        if(o.cap)o.t.style.fontWeight='600';
+      }else if(o.kind==='country'){
+        var f3=10.5/ppu;o.t.setAttribute('font-size',f3);
+        if(o.rot)o.t.setAttribute('transform','rotate('+o.rot+' '+o.x+' '+o.y+')');
+      }else if(o.kind==='sea'){o.t.setAttribute('font-size',11/ppu);}
+    });
+  }
+
   /* ---- zoom i przesuwanie ---- */
   var vb={x:0,y:0,w:G.W,h:G.H};
   function clampVB(){
@@ -305,6 +398,7 @@ window.GEO.byId={};window.GEO.REG.forEach(function(r){window.GEO.byId[r.id]=r;})
     if(!rc.width)return;
     var ppu=rc.width/vb.w,fs=10.5/ppu,z=zoomLevel();
     var on=(mode==='learn');
+    updateRef(ppu,z);
     REG.forEach(function(r){
       var t=LABS[r.id];
       if(!on||z<r.z){t.style.display='none';return;}
